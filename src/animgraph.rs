@@ -26,11 +26,12 @@ pub struct AnimGraph {
 impl AnimGraph {
     pub fn new(
         skeleton: Rc<Skeleton>,
-        definition: &AnimGraphDefinition,
+        graph_definition: &AnimGraphDefinition,
         animations_by_name: &HashMap<String, Rc<Animation>>,
     ) -> Option<Self> {
 
-        //AnimGraph {skeleton: skeleton.clone()}
+        
         None
+        //AnimGraph {skeleton: skeleton.clone()}
     }
 }

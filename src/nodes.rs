@@ -64,7 +64,7 @@ impl SamplerNode {
 
 pub struct BlendTreeOneDimNode {
     pub output: Rc<RefCell<Vec<SoaTransform>>>,
-    pub speed: f32,
+    pub playback_speed: f32,
     pub param: f32,
     blend_job: BlendingJobRc,
     sample_jobs: Vec<SamplingJobRc>,
@@ -92,7 +92,7 @@ impl BlendTreeOneDimNode {
 
         BlendTreeOneDimNode {
             output: output.clone(),
-            speed: 1.0,
+            playback_speed: 1.0,
             param: 0.0,
             blend_job,
             sample_jobs,
