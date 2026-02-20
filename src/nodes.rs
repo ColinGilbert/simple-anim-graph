@@ -2,17 +2,29 @@ use ozz_animation_rs::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+
+
+safe_index::new! {
+SamplerNodeIndex,
+map: SamplerNodesContainer
+}
+
+safe_index::new! {
+BlendTreeOneDimNodeIndex,
+map: BlendTreeOneDimNodesContainer
+}
+
 pub enum GenericNode {
-    Sampler(SamplerNode),
-    BlendTreeOneDim(BlendTreeOneDimNode)
+    Sampler(SamplerNodeIndex),
+    BlendTreeOneDim(BlendTreeOneDimNodeIndex)
 }
 pub struct SamplerNode {
     pub output: Rc<RefCell<Vec<SoaTransform>>>,
     pub speed: f32,
-    sample_job: ozz_animation_rs::SamplingJobRc,
-    seek: f32,
-    looping: bool,
-    finished: bool,
+    pub sample_job: ozz_animation_rs::SamplingJobRc,
+    pub seek: f32,
+    pub looping: bool,
+    pub finished: bool,
 }
 
 impl SamplerNode {

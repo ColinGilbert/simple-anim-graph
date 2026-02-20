@@ -1,6 +1,8 @@
-pub struct Transition {
-    duration: web_time::Duration,
+safe_index::new! {
+TransitionIndex,
+map: TransitionsContainer
 }
 
-impl Transition {
+pub struct Transition {
+    pub duration: web_time::Duration,
 }

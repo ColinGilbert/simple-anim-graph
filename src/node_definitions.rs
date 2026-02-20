@@ -1,11 +1,14 @@
+
+
 pub enum GenericNodeDefinition {
     Sampler(SamplerNodeDefinition),
     BlendTreeOneDim(BlendTreeOneDimDefinition)
 }
 
 pub struct SamplerNodeDefinition {
-    animation_name: String,
-    looping: bool
+    pub speed: f32,
+    pub animation_name: String,
+    pub looping: bool,
 }
 
 pub struct BlendTreeOneDimDefinition {
