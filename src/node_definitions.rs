@@ -13,5 +13,6 @@ pub struct SamplerNodeDefinition {
 }
 
 pub struct BlendTreeOneDimDefinition {
-    animation_names: Vec<String>    
+    animation_names: Vec<String>,
+    name: String
 }

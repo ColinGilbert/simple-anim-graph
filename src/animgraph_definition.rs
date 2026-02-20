@@ -4,5 +4,5 @@ use crate::{edge_definitions::TransitionDefinition, node_definitions::GenericNod
 
 pub struct AnimGraphDefinition {
     pub graph: SlotMapGraph<GenericNodeDefinition, TransitionDefinition>,
-    pub root: NodeIndex
+    pub root: Option<NodeIndex>
 }

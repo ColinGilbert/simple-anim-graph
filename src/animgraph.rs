@@ -25,6 +25,20 @@ impl AnimGraph {
         animgraph_definition: &AnimGraphDefinition,
         animations_by_name: &HashMap<String, Rc<Animation>>,
     ) -> Result<Self, anyhow::Error> {
+        match animgraph_definition.root {
+            Some(val) => { 
+                let node_opt = animgraph_definition.graph.node(val);
+                match node_opt {
+                    Some(_) => {}
+                    None => {
+                        return Err(anyhow!("Invalid root node in animgraph definition"));
+                    }
+                }
+            }
+            None => {
+                return Err(anyhow!("No root node found in animgraph definition"));
+            }
+        }
         let mut graph = SlotMapGraph::<GenericNode, TransitionIndex>::with_capacities(animgraph_definition.graph.nodes_count(), animgraph_definition.graph.edges_count());
         let mut samplers = SamplerNodesContainer::<SamplerNode>::new();
         // Go over each node in the animgraph's definition and add it to the final graph, saving its definition node/final node pair in a map
@@ -75,11 +89,11 @@ impl AnimGraph {
 
                 },
                 None => {
-                    return Err(anyhow!("Invalid edge in graph definition"));
+                    return Err(anyhow!("Invalid edge found in graph definition"));
                 }
             }
         }
-        let root = node_mappings[&animgraph_definition.root];
+        let root = node_mappings[&animgraph_definition.root.unwrap()];
         
         Ok(AnimGraph { skeleton: skeleton.clone(), graph, samplers, transitions, root, node_names  })
     }
