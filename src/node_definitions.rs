@@ -9,6 +9,7 @@ pub struct SamplerNodeDefinition {
     pub speed: f32,
     pub animation_name: String,
     pub looping: bool,
+    pub name: String,
 }
 
 pub struct BlendTreeOneDimDefinition {
