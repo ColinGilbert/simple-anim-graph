@@ -259,36 +259,6 @@ impl AnimGraph {
         None
     }
 
-    // The following is likely unneeded as the graph is built into a known-good state (wrt. nodes and edges)
-    // It also doesn't delete and nodes/edges so it shouldn't panic when unwrapping
-    // fn check_node(&mut self, node_idx: Option<NodeIndex>) -> bool {
-    //     match node_idx {
-    //         Some(val) => {}
-    //         None => { return false; }
-    //     }
-    //     match self.graph.node(node_idx.unwrap()) {
-    //         Some(val) => {
-    //             let generic_node = val.weight();
-    //             match generic_node {
-    //                 GenericNode::Sampler(val) => {
-    //                     if !self.samplers.len() > val.into() {
-    //                         return false;
-    //                     }
-    //                 }
-    //                 GenericNode::BlendTreeOneDim(val) => {
-    //                     if !self.blend_trees_one_dim.len() > val.into() {
-    //                         return false;
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //         None => {
-    //             return false;
-    //         }
-    //     }
-    //     true
-    // }
-
     fn dfs(&mut self, target: NodeIndex) {
         self.target = target;
         self.path.clear();
