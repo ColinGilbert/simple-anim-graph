@@ -3,7 +3,6 @@ use crate::edges::*;
 use crate::node_definitions::GenericNodeDefinition;
 use crate::nodes::*;
 use anyhow::anyhow;
-use core::from;
 use mapgraph::aliases::SlotMapGraph;
 use mapgraph::map::slotmap::EdgeIndex;
 use mapgraph::map::slotmap::NodeIndex;
@@ -25,9 +24,9 @@ pub struct AnimGraph {
     current_transition: Option<EdgeIndex>,
     target: NodeIndex,
     on_a_transition: bool,
-    path: VecDeque<NodeIndex>,
-    dfs_node_under_evaluation: NodeIndex,
-    dfs_temp_stack: Vec<NodeIndex>,
+    path: VecDeque<EdgeIndex>,
+    dfs_node_under_evaluation: Option<NodeIndex>,
+    dfs_temp_edges_stack: Vec<EdgeIndex>,
     dfs_visited: HashSet<NodeIndex>,
     node_names: HashMap<String, NodeIndex>,
 }
@@ -139,8 +138,8 @@ impl AnimGraph {
         let root_node = node_mappings[&animgraph_definition.root.unwrap()];
         let current_node = Some(root_node);
         let target = root_node;
-        let dfs_node_under_evaluation = root_node;
-        let path = VecDeque::<NodeIndex>::new();
+        let dfs_node_under_evaluation = None;
+        let path = VecDeque::<EdgeIndex>::new();
 
         Ok(AnimGraph {
             skeleton: skeleton.clone(),
@@ -154,7 +153,7 @@ impl AnimGraph {
             target,
             path,
             on_a_transition: false,
-            dfs_temp_stack: Vec::<NodeIndex>::new(),
+            dfs_temp_edges_stack: Vec::<EdgeIndex>::new(),
             dfs_visited: HashSet::<NodeIndex>::new(),
             dfs_node_under_evaluation,
             node_names,
@@ -170,28 +169,53 @@ impl AnimGraph {
                     let transition_idx = edge.weight();
                     let from = self.graph.node(edge.from()).unwrap().weight();
                     // Calculate the time taken and check whether or not the transition is finished.
-                    // If so, move onto the next node.
-                    // Otherwise, evaluate the transition.
-                    match from {
-                        GenericNode::Sampler(val) => {
-                            self.samplers[*val].update(dt);
-                        }
-                        GenericNode::BlendTreeOneDim(val) => {
-                            self.blend_trees_one_dim[*val].update(dt);
-                        }
+                    self.transitions[*transition_idx].seek += dt;
+                    let finished: bool;
+                    if self.transitions[*transition_idx].seek
+                        >= self.transitions[*transition_idx].duration
+                    {
+                        finished = true;
+                    } else {
+                        finished = false;
                     }
-                    let to = self.graph.node(edge.to()).unwrap().weight();
-                    match to {
-                        GenericNode::Sampler(val) => {
-                            self.samplers[*val].update(dt);
+                    // If finished, move onto the next node.
+                    if finished {
+                        self.transitions[*transition_idx].reset();
+                        let front = self.path.front();
+                        match front {
+                            Some(val) => {
+                                self.current_transition = Some(*val);
+                                self.path.pop_front();
+                                self.on_a_transition = false;
+                            }
+                            None => {}
                         }
-                        GenericNode::BlendTreeOneDim(val) => {
-                            self.blend_trees_one_dim[*val].update(dt);
+                    } else {
+                        // Otherwise, evaluate the transition
+                        match from {
+                            GenericNode::Sampler(val) => {
+                                self.samplers[*val].update(dt);
+                            }
+                            GenericNode::BlendTreeOneDim(val) => {
+                                self.blend_trees_one_dim[*val].update(dt);
+                            }
                         }
-                    }
-                    if !self.transitions[*transition_idx].started {
-                        self.transitions[*transition_idx].started = true;
-                        self.transitions[*transition_idx].blend_job.run();
+                        let to = self.graph.node(edge.to()).unwrap().weight();
+                        match to {
+                            GenericNode::Sampler(val) => {
+                                self.samplers[*val].update(dt);
+                            }
+                            GenericNode::BlendTreeOneDim(val) => {
+                                self.blend_trees_one_dim[*val].update(dt);
+                            }
+                        }
+                        let results = self.transitions[*transition_idx].blend_job.run();
+                        match results {
+                            Ok(_) => {}
+                            Err(e) => {
+                                return Err(anyhow! {"Ozz error during transition blend: {}", e});
+                            }
+                        }
                     }
                 }
                 None => return Err(anyhow! {"Invalid current transition during evaluation."}),
@@ -250,44 +274,53 @@ impl AnimGraph {
     fn dfs(&mut self, target: NodeIndex) {
         self.target = target;
         self.path.clear();
-        self.dfs_temp_stack.clear();
+        self.dfs_temp_edges_stack.clear();
         self.dfs_visited.clear();
+        self.dfs_node_under_evaluation = self.current_node;
         self.dfs_helper();
     }
 
     fn dfs_helper(&mut self) {
         // Get the last item in the path, check to see if its been visited, add it to path stack, and add to the visited set
-        if !self.dfs_visited.contains(&self.dfs_node_under_evaluation) {
-            self.dfs_visited.insert(self.dfs_node_under_evaluation);
-            self.dfs_temp_stack.push(self.dfs_node_under_evaluation);
+        if self
+            .dfs_visited
+            .contains(&self.dfs_node_under_evaluation.unwrap())
+        {
+            //self.dfs_temp_edges_stack.push(self.dfs_node_under_evaluation.unwrap());
+            self.dfs_temp_edges_stack.pop();
+        } else {
+            self.dfs_visited
+                .insert(self.dfs_node_under_evaluation.unwrap());
         }
-
         let mut backtracking = true;
-        for (_, edge_ref) in self.graph.outputs(self.dfs_node_under_evaluation) {
+        // let next_node = self.graph.node(self.dfs_node_under_evaluation.unwrap()).unwrap();
+        for (edge_index, edge_ref) in self.graph.outputs(self.dfs_node_under_evaluation.unwrap()) {
             if !self.dfs_visited.contains(&edge_ref.to()) {
                 backtracking = false;
-                self.dfs_temp_stack.push(edge_ref.to());
+                self.dfs_temp_edges_stack.push(edge_index);
+                self.dfs_node_under_evaluation = Some(edge_ref.to());
                 break;
             }
         }
-
         if backtracking {
-            self.dfs_temp_stack.pop();
+            let last_node = self.graph.edge(*self.dfs_temp_edges_stack.last().unwrap()).unwrap().from();
+            self.dfs_node_under_evaluation = Some(last_node);
+            self.dfs_temp_edges_stack.pop();
         }
-
         // Check to see if the work is finished and return if so.
         let mut finished = false;
-        match self.dfs_temp_stack.last() {
+        match self.dfs_temp_edges_stack.last() {
             Some(val) => {
-                if val == &self.target {
+                let n = self.graph.edge(*val).unwrap().to();
+                if n == self.target {
                     finished = true;
                 }
             }
             None => {}
         }
         if finished {
-            for n in &self.dfs_temp_stack {
-                self.path.push_back(*n);
+            for e in &self.dfs_temp_edges_stack {
+                self.path.push_back(*e);
             }
             return;
         }

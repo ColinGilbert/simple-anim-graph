@@ -43,4 +43,9 @@ impl Transition {
             started: false,
         }
     }
+
+    pub fn reset(&mut self) {
+        self.seek = web_time::Duration::from_nanos(0);
+        self.started = false;
+    }
 }
