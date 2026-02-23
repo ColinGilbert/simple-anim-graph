@@ -209,6 +209,16 @@ impl AnimGraph {
                                 self.blend_trees_one_dim[*val].update(dt);
                             }
                         }
+                        // Set the blend layer weights based on time elapsed.
+                        self.transitions[*transition_idx].seek =
+                            self.transitions[*transition_idx].seek + dt;
+                        let ratio = (self.transitions[*transition_idx].duration.as_nanos()
+                            / self.transitions[*transition_idx].seek.as_nanos())
+                            as f32;
+                        self.transitions[*transition_idx].blend_job.layers_mut()[0].weight = ratio;
+                        self.transitions[*transition_idx].blend_job.layers_mut()[0].weight =
+                            1.0 - ratio;
+
                         let results = self.transitions[*transition_idx].blend_job.run();
                         match results {
                             Ok(_) => {}
@@ -286,14 +296,12 @@ impl AnimGraph {
             .dfs_visited
             .contains(&self.dfs_node_under_evaluation.unwrap())
         {
-            //self.dfs_temp_edges_stack.push(self.dfs_node_under_evaluation.unwrap());
             self.dfs_temp_edges_stack.pop();
         } else {
             self.dfs_visited
                 .insert(self.dfs_node_under_evaluation.unwrap());
         }
         let mut backtracking = true;
-        // let next_node = self.graph.node(self.dfs_node_under_evaluation.unwrap()).unwrap();
         for (edge_index, edge_ref) in self.graph.outputs(self.dfs_node_under_evaluation.unwrap()) {
             if !self.dfs_visited.contains(&edge_ref.to()) {
                 backtracking = false;
@@ -303,7 +311,11 @@ impl AnimGraph {
             }
         }
         if backtracking {
-            let last_node = self.graph.edge(*self.dfs_temp_edges_stack.last().unwrap()).unwrap().from();
+            let last_node = self
+                .graph
+                .edge(*self.dfs_temp_edges_stack.last().unwrap())
+                .unwrap()
+                .from();
             self.dfs_node_under_evaluation = Some(last_node);
             self.dfs_temp_edges_stack.pop();
         }
