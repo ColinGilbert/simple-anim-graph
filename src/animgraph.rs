@@ -251,6 +251,14 @@ impl AnimGraph {
         }
     }
 
+    pub fn get_node_by_name(&mut self, node_name: String) -> Option<NodeIndex> {
+        if self.node_names.contains_key(&node_name) {
+            let idx = self.node_names[&node_name];
+            return Some(idx)
+        }
+        None
+    }
+
     // The following is likely unneeded as the graph is built into a known-good state (wrt. nodes and edges)
     // It also doesn't delete and nodes/edges so it shouldn't panic when unwrapping
     // fn check_node(&mut self, node_idx: Option<NodeIndex>) -> bool {
