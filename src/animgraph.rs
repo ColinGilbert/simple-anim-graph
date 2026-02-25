@@ -345,9 +345,13 @@ impl AnimGraph {
         Ok(())
     }
 
-    pub fn get_skeletal_matrices(&mut self) -> &Rc<RefCell<Vec<glam::Mat4>>> {
+    pub fn get_skeletal_matrices(&mut self) -> Rc<RefCell<Vec<glam::Mat4>>> {
         let results = self.local_to_model_job.output().unwrap();
-        results
+        results.clone()
+    }
+
+    pub fn get_soa_transforms(&mut self) -> Rc<RefCell<Vec<SoaTransform>>> {
+        self.ozz_outputs.clone()
     }
 
     pub fn set_target_node_by_idx(&mut self, node_idx: NodeIndex) {
