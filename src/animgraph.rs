@@ -8,6 +8,7 @@ use mapgraph::map::slotmap::EdgeIndex;
 use mapgraph::map::slotmap::NodeIndex;
 use ozz_animation_rs::*;
 use std::cell::RefCell;
+use std::cmp;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
@@ -19,9 +20,9 @@ pub struct AnimGraph {
     samplers: SamplerNodesContainer<SamplerNode>,
     blend_trees_one_dim: BlendTreeOneDimNodesContainer<BlendTreeOneDimNode>,
     transitions: TransitionsContainer<Transition>,
-    root_node: NodeIndex,
-    current_node: Option<NodeIndex>,
-    current_transition: Option<EdgeIndex>,
+    root_node_idx: NodeIndex,
+    current_node_idx: Option<NodeIndex>,
+    current_edge_idx: Option<EdgeIndex>,
     target: NodeIndex,
     on_a_transition: bool,
     path: VecDeque<EdgeIndex>,
@@ -29,6 +30,7 @@ pub struct AnimGraph {
     dfs_temp_edges_stack: Vec<EdgeIndex>,
     dfs_visited: HashSet<NodeIndex>,
     node_names: HashMap<String, NodeIndex>,
+    local_to_model: LocalToModelJobRc,
 }
 
 impl AnimGraph {
@@ -135,21 +137,32 @@ impl AnimGraph {
                 }
             }
         }
-        let root_node = node_mappings[&animgraph_definition.root.unwrap()];
-        let current_node = Some(root_node);
-        let target = root_node;
+        let root_node_idx = node_mappings[&animgraph_definition.root.unwrap()];
+        let current_node_idx = Some(root_node_idx);
+        let target = root_node_idx;
         let dfs_node_under_evaluation = None;
         let path = VecDeque::<EdgeIndex>::new();
 
+        let mut local_to_model = LocalToModelJobRc::default();
+        local_to_model.set_skeleton(skeleton.clone());
+        let current_node = graph.node(root_node_idx).unwrap().weight();
+        match current_node {
+            GenericNode::Sampler(val) => {
+                local_to_model.set_input(samplers[*val].output.clone());
+            }
+            GenericNode::BlendTreeOneDim(val) => {
+                local_to_model.set_input(blend_trees_one_dim[*val].output.clone());
+            }
+        }
         Ok(AnimGraph {
             skeleton: skeleton.clone(),
             graph,
             samplers,
             blend_trees_one_dim,
             transitions,
-            root_node,
-            current_node,
-            current_transition: None,
+            root_node_idx,
+            current_node_idx,
+            current_edge_idx: None,
             target,
             path,
             on_a_transition: false,
@@ -157,13 +170,15 @@ impl AnimGraph {
             dfs_visited: HashSet::<NodeIndex>::new(),
             dfs_node_under_evaluation,
             node_names,
+            local_to_model,
         })
     }
 
     pub fn evaluate(&mut self, dt: web_time::Duration) -> Result<(), anyhow::Error> {
         // Handle the transition case
+        let mut ratio = 0.0;
         if self.on_a_transition {
-            match self.current_transition {
+            match self.current_edge_idx {
                 Some(val) => {
                     let edge = self.graph.edge(val).unwrap();
                     let transition_idx = edge.weight();
@@ -184,7 +199,7 @@ impl AnimGraph {
                         let front = self.path.front();
                         match front {
                             Some(val) => {
-                                self.current_transition = Some(*val);
+                                self.current_edge_idx = Some(*val);
                                 self.path.pop_front();
                                 self.on_a_transition = false;
                             }
@@ -212,9 +227,10 @@ impl AnimGraph {
                         // Set the blend layer weights based on time elapsed.
                         self.transitions[*transition_idx].seek =
                             self.transitions[*transition_idx].seek + dt;
-                        let ratio = (self.transitions[*transition_idx].duration.as_nanos()
-                            / self.transitions[*transition_idx].seek.as_nanos())
-                            as f32;
+                        ratio = (self.transitions[*transition_idx].duration.as_millis() as f32
+                            / self.transitions[*transition_idx].seek.as_millis() as f32)
+                            .clamp(0.0, 1.0);
+
                         self.transitions[*transition_idx].blend_job.layers_mut()[0].weight = ratio;
                         self.transitions[*transition_idx].blend_job.layers_mut()[0].weight =
                             1.0 - ratio;
@@ -231,13 +247,95 @@ impl AnimGraph {
                 None => return Err(anyhow! {"Invalid current transition during evaluation."}),
             }
         } else {
-            // If we are on a node. Far simpler.
-            match self.current_node {
-                Some(val) => {}
+            // If we are on a node. Far simpler to evaluate
+            match self.current_node_idx {
+                Some(val) => {
+                    // TODO: Evaluate node
+                    let node = self.graph.node(val).unwrap().weight();
+                    match node {
+                        GenericNode::Sampler(val) => {
+                            self.samplers[*val].update(dt);
+                            // : Get results of sampler to output
+                        }
+                        GenericNode::BlendTreeOneDim(val) => {
+                            self.blend_trees_one_dim[*val].update(dt);
+                        }
+                    }
+                }
                 None => return Err(anyhow! {"Invalid current node during evaluation."}),
             }
         }
+        // TODO: IMPLEMENNT
+        let mut first_time_on_transition = false;
+        let mut first_time_on_node = false;
+        // Now we check whether we are in need of transitioning through the path list, or if we're on target
+        if self.on_a_transition && ratio >= 1.0 {
+            let last_transition_idx = self
+                .graph
+                .edge(self.current_edge_idx.unwrap())
+                .unwrap()
+                .weight();
+            self.transitions[*last_transition_idx].reset();
+            match self.path.front() {
+                Some(val) => {
+                    self.current_edge_idx = Some(*val);
+                    self.current_node_idx = None;
+                    self.path.pop_front();
+                    first_time_on_transition = true;
+                }
+                None => {
+                    let t = self
+                        .graph
+                        .edge(self.current_edge_idx.unwrap())
+                        .unwrap()
+                        .to();
+                    if t != self.target {
+                        return Err(anyhow! {"Path ended on a non-target node"});
+                    }
+                    self.current_node_idx = Some(t);
+                    self.current_edge_idx = None;
+                    first_time_on_node = true;
+                }
+            }
+        }
+        // If this is the first time we're entering a transition or we find our final target, clone() the outputs to our local2model job's inputs
+        if first_time_on_transition {
+            let current_transition_idx = self
+                .graph
+                .edge(self.current_edge_idx.unwrap())
+                .unwrap()
+                .weight();
+            self.local_to_model.clear_input();
+            self.local_to_model
+                .set_input(self.transitions[*current_transition_idx].output.clone());
+        }
+        if first_time_on_node {
+            self.local_to_model.clear_input();
+
+            let current_node = self
+                .graph
+                .node(self.current_node_idx.unwrap())
+                .unwrap()
+                .weight();
+            match current_node {
+                GenericNode::Sampler(val) => {
+                    self.local_to_model
+                        .set_input(self.samplers[*val].output.clone());
+                }
+                GenericNode::BlendTreeOneDim(val) => {
+                    self.local_to_model
+                        .set_input(self.blend_trees_one_dim[*val].output.clone());
+                }
+            }
+        }
+
         Ok(())
+    }
+
+    // TODO: IMPLEMENT
+    pub fn get_skeletal_matrices(&mut self) -> Vec<glam::Mat4> {
+        let results = Vec::<glam::Mat4>::new();
+        results
     }
 
     pub fn set_target_node_by_idx(&mut self, node_idx: NodeIndex) {
@@ -254,7 +352,7 @@ impl AnimGraph {
     pub fn get_node_by_name(&mut self, node_name: String) -> Option<NodeIndex> {
         if self.node_names.contains_key(&node_name) {
             let idx = self.node_names[&node_name];
-            return Some(idx)
+            return Some(idx);
         }
         None
     }
@@ -264,7 +362,7 @@ impl AnimGraph {
         self.path.clear();
         self.dfs_temp_edges_stack.clear();
         self.dfs_visited.clear();
-        self.dfs_node_under_evaluation = self.current_node;
+        self.dfs_node_under_evaluation = self.current_node_idx;
         self.dfs_helper();
     }
 
