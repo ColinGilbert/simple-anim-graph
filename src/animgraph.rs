@@ -30,7 +30,8 @@ pub struct AnimGraph {
     dfs_temp_edges_stack: Vec<EdgeIndex>,
     dfs_visited: HashSet<NodeIndex>,
     node_names: HashMap<String, NodeIndex>,
-    local_to_model: LocalToModelJobRc,
+    local_to_model_job: LocalToModelJobRc,
+    ozz_outputs: Rc<RefCell<Vec<SoaTransform>>>
 }
 
 impl AnimGraph {
@@ -143,17 +144,21 @@ impl AnimGraph {
         let dfs_node_under_evaluation = None;
         let path = VecDeque::<EdgeIndex>::new();
 
-        let mut local_to_model = LocalToModelJobRc::default();
-        local_to_model.set_skeleton(skeleton.clone());
+        let mut local_to_model_job = LocalToModelJobRc::default();
+        local_to_model_job.set_skeleton(skeleton.clone());
         let current_node = graph.node(root_node_idx).unwrap().weight();
+        let ozz_outputs: Rc<RefCell<Vec<SoaTransform>>>;
         match current_node {
             GenericNode::Sampler(val) => {
-                local_to_model.set_input(samplers[*val].output.clone());
+                local_to_model_job.set_input(samplers[*val].output.clone());
+                ozz_outputs = samplers[*val].output.clone();
             }
             GenericNode::BlendTreeOneDim(val) => {
-                local_to_model.set_input(blend_trees_one_dim[*val].output.clone());
+                local_to_model_job.set_input(blend_trees_one_dim[*val].output.clone());
+                ozz_outputs = blend_trees_one_dim[*val].output.clone();
             }
         }
+
         Ok(AnimGraph {
             skeleton: skeleton.clone(),
             graph,
@@ -170,7 +175,8 @@ impl AnimGraph {
             dfs_visited: HashSet::<NodeIndex>::new(),
             dfs_node_under_evaluation,
             node_names,
-            local_to_model,
+            local_to_model_job,
+            ozz_outputs
         })
     }
 
@@ -265,10 +271,9 @@ impl AnimGraph {
                 None => return Err(anyhow! {"Invalid current node during evaluation."}),
             }
         }
-        // TODO: IMPLEMENNT
+        // Now we check whether we are in need of transitioning through the path list, or if we're on target
         let mut first_time_on_transition = false;
         let mut first_time_on_node = false;
-        // Now we check whether we are in need of transitioning through the path list, or if we're on target
         if self.on_a_transition && ratio >= 1.0 {
             let last_transition_idx = self
                 .graph
@@ -298,6 +303,11 @@ impl AnimGraph {
                 }
             }
         }
+        let l2m_results = self.local_to_model_job.run();
+        match l2m_results {
+            Ok(_) => {}
+            Err(e) => {return Err(anyhow!{"Error running local-to-model job: {}", e})}
+        }
         // If this is the first time we're entering a transition or we find our final target, clone() the outputs to our local2model job's inputs
         if first_time_on_transition {
             let current_transition_idx = self
@@ -305,12 +315,13 @@ impl AnimGraph {
                 .edge(self.current_edge_idx.unwrap())
                 .unwrap()
                 .weight();
-            self.local_to_model.clear_input();
-            self.local_to_model
+            self.local_to_model_job.clear_input();
+            self.local_to_model_job
                 .set_input(self.transitions[*current_transition_idx].output.clone());
+            self.ozz_outputs = self.transitions[*current_transition_idx].output.clone();
         }
         if first_time_on_node {
-            self.local_to_model.clear_input();
+            self.local_to_model_job.clear_input();
 
             let current_node = self
                 .graph
@@ -319,12 +330,14 @@ impl AnimGraph {
                 .weight();
             match current_node {
                 GenericNode::Sampler(val) => {
-                    self.local_to_model
+                    self.local_to_model_job
                         .set_input(self.samplers[*val].output.clone());
+                    self.ozz_outputs = self.samplers[*val].output.clone();
                 }
                 GenericNode::BlendTreeOneDim(val) => {
-                    self.local_to_model
+                    self.local_to_model_job
                         .set_input(self.blend_trees_one_dim[*val].output.clone());
+                    self.ozz_outputs = self.blend_trees_one_dim[*val].output.clone();
                 }
             }
         }
@@ -332,9 +345,8 @@ impl AnimGraph {
         Ok(())
     }
 
-    // TODO: IMPLEMENT
-    pub fn get_skeletal_matrices(&mut self) -> Vec<glam::Mat4> {
-        let results = Vec::<glam::Mat4>::new();
+    pub fn get_skeletal_matrices(&mut self) -> &Rc<RefCell<Vec<glam::Mat4>>> {
+        let results = self.local_to_model_job.output().unwrap();
         results
     }
 

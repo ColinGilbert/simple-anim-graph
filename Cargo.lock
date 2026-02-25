@@ -114,19 +114,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "glam"
-version = "0.32.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34627c5158214743a374170fed714833fdf4e4b0cbcc1ea98417866a4c5d4441"
-
-[[package]]
 name = "glam-ext"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55bc3bce8d1476369a244cfa2857695a3ff96d58631db83253186ade322d04da"
 dependencies = [
  "approx",
- "glam 0.30.10",
+ "glam",
  "libm",
  "rkyv",
 ]
@@ -216,7 +210,7 @@ checksum = "16f9fb83a8dded39c7684045951a0be9c93d0ba2e5a543990dc0b48713808cb4"
 dependencies = [
  "bimap",
  "bytecheck",
- "glam 0.30.10",
+ "glam",
  "glam-ext",
  "rkyv",
  "serde",
@@ -363,7 +357,7 @@ name = "simple-animgraph"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "glam 0.32.0",
+ "glam",
  "mapgraph",
  "ozz-animation-rs",
  "safe_index",
