@@ -1,4 +1,4 @@
-This is a simplified version of anim-graph-rs, [https://www.github.com/colingilbert/anim-graph-rs] my other Rust animgraph library. It is intended to be the one that gets worked on moving forward.
+This is a simplified version of anim-graph-rs, my other Rust animgraph library (https://www.github.com/colingilbert/anim-graph-rs). It is intended to be the one that gets worked on moving forward.
 
 Uses ozz-animation under the hood. Currently a work-in-progress.
 
