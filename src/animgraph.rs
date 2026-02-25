@@ -8,7 +8,6 @@ use mapgraph::map::slotmap::EdgeIndex;
 use mapgraph::map::slotmap::NodeIndex;
 use ozz_animation_rs::*;
 use std::cell::RefCell;
-use std::cmp;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
