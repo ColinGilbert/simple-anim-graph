@@ -1,5 +1,3 @@
-
-
 pub enum GenericNodeDefinition {
     Sampler(SamplerNodeDefinition),
     BlendTreeOneDim(BlendTreeOneDimDefinition)
@@ -13,6 +11,6 @@ pub struct SamplerNodeDefinition {
 }
 
 pub struct BlendTreeOneDimDefinition {
-    animation_names: Vec<String>,
-    name: String
+    pub animation_names: Vec<String>,
+    pub name: String
 }

@@ -2,8 +2,6 @@ use ozz_animation_rs::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-
-
 safe_index::new! {
 SamplerNodeIndex,
 map: SamplerNodesContainer
@@ -80,6 +78,7 @@ pub struct BlendTreeOneDimNode {
     pub param: f32,
     blend_job: BlendingJobRc,
     sample_jobs: Vec<SamplingJobRc>,
+    seek: f32,
 }
 
 impl BlendTreeOneDimNode {
@@ -87,7 +86,6 @@ impl BlendTreeOneDimNode {
         let mut sample_jobs = Vec::<SamplingJobRc>::new();
         let mut blend_job = BlendingJobRc::default();
         blend_job.set_skeleton(skeleton.clone());
-
         for a in anims {
             let mut sample = SamplingJobRc::default();
             sample.set_animation(a.clone());
@@ -108,10 +106,22 @@ impl BlendTreeOneDimNode {
             param: 0.0,
             blend_job,
             sample_jobs,
+            seek: 0.0,
         }
     }
 
     pub fn update(&mut self, dt: web_time::Duration) {
+        for l in self.blend_job.layers_mut() {
+            l.weight = 0.0;
+        }
+        let param_raw = self.param.abs() * self.sample_jobs.len() as f32;
+        let floor = param_raw.floor() as usize;
+        let ceil = param_raw.ceil() as usize;
+        let param_between = param_raw - floor as f32;
+        self.blend_job.layers_mut()[floor].weight = 1.0 - param_between;
+        self.blend_job.layers_mut()[ceil].weight = param_between;
+        self.seek += dt.as_millis() as f32 * self.playback_speed.abs();
+        
 
     }
 }
