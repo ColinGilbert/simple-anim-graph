@@ -74,7 +74,7 @@ impl AnimGraph {
                             }
                             let animation = &animations_by_name[&val.animation_name];
                             let sampler_node =
-                                SamplerNode::new(skeleton.clone(), animation.clone(), val.looping);
+                                SamplerNode::new(skeleton.clone(), animation.clone(), val.speed, val.looping);
                             let sampler_idx = samplers.push(sampler_node);
                             let node_idx = graph.add_node(GenericNode::Sampler(
                                 SamplerNodeIndex::from(sampler_idx),

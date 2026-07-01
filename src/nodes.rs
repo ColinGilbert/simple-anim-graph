@@ -26,7 +26,7 @@ pub struct SamplerNode {
 }
 
 impl SamplerNode {
-    pub fn new(skeleton: Rc<Skeleton>, animation: Rc<Animation>, looping: bool) -> Self {
+    pub fn new(skeleton: Rc<Skeleton>, animation: Rc<Animation>, speed: f32, looping: bool) -> Self {
         let mut sample_job = ozz_animation_rs::SamplingJob::default();
         sample_job.set_animation(animation.clone());
 
@@ -40,7 +40,7 @@ impl SamplerNode {
         sample_job.set_output(output.clone());
         SamplerNode {
             output,
-            speed: 1.0,
+            speed,
             sample_job,
             seek: 0.0,
             looping,
