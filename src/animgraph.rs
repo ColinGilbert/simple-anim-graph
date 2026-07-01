@@ -26,7 +26,7 @@ pub struct AnimGraph {
     node_names: HashMap<String, NodeIndex>,
     local_to_model_job: LocalToModelJobRc,
     output: Rc<RefCell<Vec<SoaTransform>>>,
-    model_matrices: Rc<RefCell<Vec<Mat4>>>,
+    model_matrices: Rc<RefCell<Vec<glam::Mat4>>>,
 }
 
 impl AnimGraph {
