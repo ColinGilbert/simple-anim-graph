@@ -395,11 +395,11 @@ impl AnimGraph {
         }
     }
 
-    pub fn get_output(&self) -> Vec<Mat4> {
+    pub fn get_output(&self) -> Vec<glam::Mat4> {
         self.local_to_model_job
             .run()
             .expect("Local to model job failed.");
-        let mut results = Vec::<Mat4>::new();
+        let mut results = Vec::<glam::Mat4>::new();
         for m in self.model_matrices.buf().unwrap().iter() {
             results.push(*m);
         }
