@@ -26,6 +26,7 @@ pub struct AnimGraph {
     node_names: HashMap<String, NodeIndex>,
     local_to_model_job: LocalToModelJobRc,
     output: Rc<RefCell<Vec<SoaTransform>>>,
+    model_matrices: Rc<RefCell<Vec<Mat4>>>,
 }
 
 impl AnimGraph {
@@ -178,6 +179,13 @@ impl AnimGraph {
             }
         }
 
+        let model_matrices = Rc::new(RefCell::new(vec![
+            glam::Mat4::IDENTITY;
+            skeleton.num_joints()
+        ]));
+
+        local_to_model_job.set_output(models.clone());
+
         Ok(AnimGraph {
             skeleton: skeleton.clone(),
             graph,
@@ -193,6 +201,7 @@ impl AnimGraph {
             node_names,
             local_to_model_job,
             output,
+            model_matrices,
         })
     }
 
@@ -386,8 +395,14 @@ impl AnimGraph {
         }
     }
 
-    pub fn get_output(&self) -> Rc<RefCell<Vec<SoaTransform>>> {
-        return self.output.clone();
+    pub fn get_output(&self) -> Vec<Mat4> {
+        self.local_to_model_job
+            .run()
+            .expect("Local to model job failed.");
+        let mut results = Vec::<Mat4>::new();
+        for m in self.model_matrices.buf().unwrap().iter() {
+            results.push(*m);
+        }
+        results
     }
-
 }

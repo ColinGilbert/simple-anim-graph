@@ -38,7 +38,6 @@ impl SamplerNode {
         ]));
 
         sample_job.set_output(output.clone());
-
         SamplerNode {
             output,
             speed: 1.0,
