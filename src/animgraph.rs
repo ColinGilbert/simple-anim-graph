@@ -385,4 +385,9 @@ impl AnimGraph {
             //self.dfs(node_idx);
         }
     }
+
+    pub fn get_output(&self) -> Rc<RefCell<Vec<SoaTransform>>> {
+        return self.output.clone();
+    }
+
 }
