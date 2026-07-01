@@ -184,7 +184,7 @@ impl AnimGraph {
             skeleton.num_joints()
         ]));
 
-        local_to_model_job.set_output(models.clone());
+        local_to_model_job.set_output(model_matrices.clone());
 
         Ok(AnimGraph {
             skeleton: skeleton.clone(),
