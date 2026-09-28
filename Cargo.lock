@@ -138,9 +138,9 @@ dependencies = [
 
 [[package]]
 name = "glam"
-version = "0.30.10"
+version = "0.33.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19fc433e8437a212d1b6f1e68c7824af3aed907da60afa994e7f542d18d12aa9"
+checksum = "7f22fb22f065b308be0d8724e3706c7fa3fc2a6c7d6899df4cad7860e7a75436"
 dependencies = [
  "approx",
  "bytemuck",
@@ -150,19 +150,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "glam"
-version = "0.33.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f22fb22f065b308be0d8724e3706c7fa3fc2a6c7d6899df4cad7860e7a75436"
-
-[[package]]
 name = "glam-ext"
-version = "0.3.2"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55bc3bce8d1476369a244cfa2857695a3ff96d58631db83253186ade322d04da"
+checksum = "49f6098938830bba86809107b50dcb0fbdb037dac6e43dbe4af4c0b9126dfaa0"
 dependencies = [
  "approx",
- "glam 0.30.10",
+ "glam",
  "libm",
  "rkyv",
 ]
@@ -246,13 +240,12 @@ checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
 name = "ozz-animation-rs"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16f9fb83a8dded39c7684045951a0be9c93d0ba2e5a543990dc0b48713808cb4"
+version = "0.11.1"
+source = "git+https://github.com/colingilbert/ozz-animation-rs.git?branch=master#ea9f1d92cbe7b3d5179208335cd25088be7e0f2d"
 dependencies = [
  "bimap",
  "bytecheck",
- "glam 0.30.10",
+ "glam",
  "glam-ext",
  "rkyv",
  "serde",
@@ -417,7 +410,7 @@ name = "simple-animgraph"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "glam 0.33.2",
+ "glam",
  "ozz-animation-rs",
  "petgraph",
  "safe_index",
