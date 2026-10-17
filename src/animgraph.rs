@@ -4,7 +4,7 @@ use crate::node_definitions::GenericNodeDefinition;
 use crate::nodes::*;
 use anyhow::anyhow;
 use ozz_animation_rs::*;
-use petgraph::algo::dijkstra;
+// use petgraph::algo::dijkstra;
 use petgraph::graph::{EdgeIndex, Graph, NodeIndex};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -12,12 +12,12 @@ use std::collections::VecDeque;
 use std::rc::Rc;
 
 pub struct AnimGraph {
-    skeleton: Rc<Skeleton>,
+    //skeleton: Rc<Skeleton>,
     graph: Graph<GenericNode, TransitionIndex>,
     samplers: SamplerNodesContainer<SamplerNode>,
     blend_trees_one_dim: BlendTreeOneDimNodesContainer<BlendTreeOneDimNode>,
     transitions: TransitionsContainer<Transition>,
-    root_node_idx: NodeIndex,
+   //root_node_idx: NodeIndex,
     current_node_idx: Option<NodeIndex>,
     current_edge_idx: Option<EdgeIndex>,
     target: NodeIndex,
@@ -26,7 +26,7 @@ pub struct AnimGraph {
     node_names: HashMap<String, NodeIndex>,
     local_to_model_job: LocalToModelJobRc,
     output: Rc<RefCell<Vec<SoaTransform>>>,
-    model_matrices: Rc<RefCell<Vec<glam::Mat4>>>,
+   //model_matrices: Rc<RefCell<Vec<glam::Mat4>>>,
 }
 
 impl AnimGraph {
@@ -82,7 +82,7 @@ impl AnimGraph {
                             node_names.insert(val.name.clone(), node_idx);
                             node_definitions_to_node_mappings.insert(node_definition_idx, node_idx);
                         }
-                        GenericNodeDefinition::BlendTreeOneDim(val) => {} // TODO: DO LATER
+                        GenericNodeDefinition::BlendTreeOneDim(_val) => {} // TODO: DO LATER
                     }
                 }
                 None => {
@@ -187,12 +187,12 @@ impl AnimGraph {
         local_to_model_job.set_output(model_matrices.clone());
 
         Ok(AnimGraph {
-            skeleton: skeleton.clone(),
+            //skeleton: skeleton.clone(),
             graph,
             samplers,
             blend_trees_one_dim,
             transitions,
-            root_node_idx,
+            //root_node_idx,
             current_node_idx,
             current_edge_idx: None,
             target,
@@ -201,7 +201,7 @@ impl AnimGraph {
             node_names,
             local_to_model_job,
             output,
-            model_matrices,
+            //model_matrices,
         })
     }
 
@@ -384,13 +384,14 @@ impl AnimGraph {
         None
     }
 
-    pub fn set_target_node_by_idx(&mut self, node_idx: NodeIndex) {
+    // TODO
+    pub fn set_target_node_by_idx(&mut self, _node_idx: NodeIndex) {
         //self.dfs(node_idx);
     }
 
     pub fn set_target_node_by_name(&mut self, node_name: String) {
         if self.node_names.contains_key(&node_name) {
-            let node_idx = self.node_names[&node_name];
+            let _node_idx = self.node_names[&node_name];
             //self.dfs(node_idx);
         }
     }
